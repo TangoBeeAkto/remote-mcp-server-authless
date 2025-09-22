@@ -1,6 +1,7 @@
 import { McpAgent } from "agents/mcp";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import { collectTraffic, duplicateRequest } from "./akto-wrapper";
 
 // Define our MCP agent with tools
 export class MyMCP extends McpAgent {
@@ -55,15 +56,20 @@ export class MyMCP extends McpAgent {
 }
 
 export default {
-	fetch(request: Request, env: Env, ctx: ExecutionContext) {
+	async fetch(request: Request, env: Env, ctx: ExecutionContext) {
 		const url = new URL(request.url);
+		const [reqForFetch, reqForCollector] = await duplicateRequest(request); // At the starting of your fetch method
 
 		if (url.pathname === "/sse" || url.pathname === "/sse/message") {
-			return MyMCP.serveSSE("/sse").fetch(request, env, ctx);
+			const handler = MyMCP.serveSSE("/sse");
+			const backendResponse = await handler.fetch(reqForFetch, env, ctx);
+			return collectTraffic(reqForCollector, backendResponse, env, ctx);
 		}
 
 		if (url.pathname === "/mcp") {
-			return MyMCP.serve("/mcp").fetch(request, env, ctx);
+			const handler = MyMCP.serve("/mcp");
+			const backendResponse = await handler.fetch(reqForFetch, env, ctx);
+			return collectTraffic(reqForCollector, backendResponse, env, ctx);
 		}
 
 		return new Response("Not found", { status: 404 });

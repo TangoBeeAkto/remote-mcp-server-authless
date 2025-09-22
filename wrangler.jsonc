@@ -22,6 +22,14 @@
 			}
 		]
 	},
+	"queues": {
+		"producers": [
+		{
+			"queue": "akto-traffic-queue",
+			"binding": "AKTO_TRAFFIC_QUEUE"
+		}
+		]
+	},
 	"observability": {
 		"enabled": true
 	}
